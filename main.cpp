@@ -1,6 +1,4 @@
 #include "mbed.h"
-#include <cmath>
-#include <vector>
 
 class RunningStats
 {
@@ -12,16 +10,16 @@ class RunningStats
 		double Mean() const;
 		double Variance() const;
 		double VarianceSample() const;
-		double StandardDeviation() const;
 		double Skewness() const;
 		double Kurtosis() const;
-
-		friend RunningStats operator+(const RunningStats a, const RunningStats b);
-		RunningStats& operator+=(const RunningStats &rhs);
+        double Max() const;
+        double Min() const;
 
 	private:
 		long long n;
 		double M1, M2, M3, M4;
+        double min, max;
+        bool first;
 };
 
 RunningStats::RunningStats()
@@ -33,6 +31,9 @@ void RunningStats::Clear()
 {
 	n = 0;
 	M1 = M2 = M3 = M4 = 0.0;
+    first = true;
+    min = 0;
+    max = 0;
 }
 
 void RunningStats::Push(double x)
@@ -49,6 +50,16 @@ void RunningStats::Push(double x)
 	M4 += term1 * delta_n2 * (n*n - 3*n + 3) + 6 * delta_n2 * M2 - 4 * delta_n * M3;
 	M3 += term1 * delta_n * (n - 2) - 3 * delta_n * M2;
 	M2 += term1;
+
+    if (x < min || first) {
+        min = x;
+        first = false;
+    }
+
+    if (x > max || first) {
+        max = x;
+        first = false;
+    }
 }
 
 long long RunningStats::NumDataValues() const
@@ -71,11 +82,6 @@ double RunningStats::Variance() const
 	return M2/(n);
 }
 
-double RunningStats::StandardDeviation() const
-{
-	return sqrt( Variance() );
-}
-
 double RunningStats::Skewness() const
 {
 	return sqrt(double(n)) * M3/ pow(M2, 1.5);
@@ -86,43 +92,18 @@ double RunningStats::Kurtosis() const
 	return double(n)*M4 / (M2*M2) - 3.0;
 }
 
-RunningStats operator+(const RunningStats a, const RunningStats b)
+double RunningStats::Max() const
 {
-	RunningStats combined;
-
-	combined.n = a.n + b.n;
-
-	double delta = b.M1 - a.M1;
-	double delta2 = delta*delta;
-	double delta3 = delta*delta2;
-	double delta4 = delta2*delta2;
-
-	combined.M1 = (a.n*a.M1 + b.n*b.M1) / combined.n;
-
-	combined.M2 = a.M2 + b.M2 +
-		delta2 * a.n * b.n / combined.n;
-
-	combined.M3 = a.M3 + b.M3 +
-		delta3 * a.n * b.n * (a.n - b.n)/(combined.n*combined.n);
-	combined.M3 += 3.0*delta * (a.n*b.M2 - b.n*a.M2) / combined.n;
-
-	combined.M4 = a.M4 + b.M4 + delta4*a.n*b.n * (a.n*a.n - a.n*b.n + b.n*b.n) /
-		(combined.n*combined.n*combined.n);
-	combined.M4 += 6.0*delta2 * (a.n*a.n*b.M2 + b.n*b.n*a.M2)/(combined.n*combined.n) +
-		4.0*delta*(a.n*b.M3 - b.n*a.M3) / combined.n;
-
-	return combined;
+    return max;
 }
 
-RunningStats& RunningStats::operator+=(const RunningStats& rhs)
+double RunningStats::Min() const
 {
-	RunningStats combined = *this + rhs;
-	*this = combined;
-	return *this;
+    return min;
 }
 
-#define STATS_WIN 10
-#define RX_BUF_SIZE (STATS_WIN * sizeof(float))
+#define REC_WIN 10
+#define RX_BUF_SIZE (REC_WIN * sizeof(float))
 
 event_callback_t serialEventCb;
 void serialCb(int events);
@@ -150,7 +131,7 @@ void serialCb(int events) {
         RunningStats z_stats;
 
         float *start = (float*) rx_buf;
-        float *end = start + STATS_WIN;
+        float *end = start + REC_WIN;
 
         for (float *p = start; p < end; p++) {
             x_stats.Push(*p);
@@ -158,9 +139,10 @@ void serialCb(int events) {
 
         end = start;
         //*end++ = x_stats.NumDataValues();
+        *end++ = x_stats.Min();
+        *end++ = x_stats.Max();
         *end++ = x_stats.Mean();
         *end++ = x_stats.Variance();
-        *end++ = x_stats.StandardDeviation();
         *end++ = x_stats.Skewness();
         *end++ = x_stats.Kurtosis();
         pc.write(rx_buf, sizeof(float) * (end - start), 0, 0);
