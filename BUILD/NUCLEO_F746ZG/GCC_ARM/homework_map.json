@@ -4,7 +4,7 @@
         "size": {
             ".data": 3, 
             ".bss": 5, 
-            ".text": 120
+            ".text": 136
         }
     }, 
     {
@@ -12,7 +12,7 @@
         "size": {
             ".data": 2229, 
             ".bss": 388, 
-            ".text": 43664
+            ".text": 43232
         }
     }, 
     {
@@ -73,7 +73,7 @@
     }, 
     {
         "summary": {
-            "total_flash": 66929, 
+            "total_flash": 66513, 
             "static_ram": 23660, 
             "stack": 0, 
             "heap": 0, 
