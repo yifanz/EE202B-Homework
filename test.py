@@ -1,6 +1,7 @@
 import serial
 import struct
 from numpy import mean
+from numpy import median
 from numpy import var
 from scipy.stats import skew
 from scipy.stats import kurtosis
@@ -18,11 +19,13 @@ print "Mean     %s" % mean(floatlist)
 print "Variance %s" % var(floatlist)
 print "Skewness %s" % skew(floatlist)
 print "Kurtosis %s" % kurtosis(floatlist)
+print "Median   %s" % median(floatlist)
 print ""
 
 with serial.Serial('/dev/ttyACM0', 115200, timeout=1) as ser:
     ser.write(buf)
-    results = struct.unpack('%sf' % 6, ser.read(6 * 4))
+    nresults = 7
+    results = struct.unpack('%sf' % nresults, ser.read(nresults * 4))
 
     print "Results:"
     print "Min      %s" % results[0]
@@ -31,6 +34,7 @@ with serial.Serial('/dev/ttyACM0', 115200, timeout=1) as ser:
     print "Variance %s" % results[3]
     print "Skewness %s" % results[4]
     print "Kurtosis %s" % results[5]
+    print "Median   %s" % results[6]
     print ""
 
     ser.close()

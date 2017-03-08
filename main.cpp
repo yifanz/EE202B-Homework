@@ -1,4 +1,7 @@
 #include "mbed.h"
+#include <queue>
+#include <vector>
+#include <limits>
 
 template<typename T>
 class RunningStats
@@ -13,9 +16,8 @@ class RunningStats
         {
             n = 0;
             M1 = M2 = M3 = M4 = 0.0;
-            first = true;
-            min = 0;
-            max = 0;
+            min = std::numeric_limits<T>::max();
+            max = std::numeric_limits<T>::min();
         }
 
         void Push(T x)
@@ -34,14 +36,34 @@ class RunningStats
             M3 += term1 * delta_n * (n - 2) - 3 * delta_n * M2;
             M2 += term1;
 
-            if (x < min || first) {
+            if (x < min) {
                 min = x;
-                first = false;
             }
 
-            if (x > max || first) {
+            if (x > max) {
                 max = x;
-                first = false;
+            }
+
+            if (min_heap.empty()) {
+                min_heap.push(std::numeric_limits<T>::max());
+            }
+
+            if (max_heap.empty()) {
+                max_heap.push (std::numeric_limits<T>::min());
+            }
+
+            if (x >= min_heap.top()) {
+                min_heap.push(x);
+            } else {
+                max_heap.push(x);
+            }
+
+            if (min_heap.size() - max_heap.size() == 2) {
+                max_heap.push(min_heap.top());
+                min_heap.pop();
+            } else if (max_heap.size() - min_heap.size() == 2) {
+                min_heap.push(max_heap.top());
+                max_heap.pop();
             }
         }
 
@@ -85,11 +107,25 @@ class RunningStats
             return min;
         }
 
-    private:
-        long long n;
-        T M1, M2, M3, M4;
-        T min, max;
+		T Median() const
+		{
+			if (min_heap.size() == max_heap.size())
+				return(min_heap.top() + max_heap.top()) / ((T) 2.0);
+			else if (min_heap.size() > max_heap.size())
+				return min_heap.top();
+			else
+				return max_heap.top();
+		}
+
+	private:
+		long long n;
+		T M1, M2, M3, M4;
+
         bool first;
+        T min, max;
+
+        std::priority_queue<T, std::vector<T>, std::greater<T> > min_heap;
+        std::priority_queue<T, std::vector<T>, std::less<T> > max_heap;
 };
 
 #define REC_WIN 10
@@ -135,6 +171,7 @@ void serialCb(int events) {
         *end++ = x_stats.Variance();
         *end++ = x_stats.Skewness();
         *end++ = x_stats.Kurtosis();
+        *end++ = x_stats.Median();
         pc.write(rx_buf, sizeof(float) * (end - start), 0, 0);
     } else {
         rx_buf[0] = 'E';
