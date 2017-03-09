@@ -1,2 +1,2 @@
 Fill.text,Fill.data,Fill.bss,Misc.text,Misc.data,Misc.bss,drivers.text,drivers.data,drivers.bss,features/FEATURE_LWIP.text,features/FEATURE_LWIP.data,features/FEATURE_LWIP.bss,hal.text,hal.data,hal.bss,platform.text,platform.data,platform.bss,rtos.text,rtos.data,rtos.bss,rtos/rtx.text,rtos/rtx.data,rtos/rtx.bss,targets/TARGET_STM.text,targets/TARGET_STM.data,targets/TARGET_STM.bss,static_ram,heap,stack,total_ram,total_flash
-197,7,13,58639,2257,2564,2394,4,132,44,0,12536,527,0,8,1730,4,297,149,4,4,6309,20,6870,9760,4,1152,25876,unknown,unknown,25876,82049
+167,7,13,60146,2257,2932,2394,4,132,44,0,12536,360,0,8,1730,4,297,149,4,4,6309,20,6870,9591,4,1152,26244,unknown,unknown,26244,83190

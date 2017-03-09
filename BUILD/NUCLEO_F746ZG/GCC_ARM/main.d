@@ -144,4 +144,4 @@ BUILD/NUCLEO_F746ZG/GCC_ARM/./main.o: main.cpp \
  mbed-os/drivers/InterruptIn.h mbed-os/hal/gpio_irq_api.h \
  mbed-os/platform/wait_api.h mbed-os/hal/sleep_api.h \
  mbed-os/platform/rtc_time.h mbed-os/platform/Callback.h \
- mbed-os/platform/FunctionPointer.h
+ mbed-os/platform/FunctionPointer.h stats.h
