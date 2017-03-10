@@ -22,6 +22,25 @@ class RunningStats
             max = std::numeric_limits<T>::min();
         }
 
+        void Reset()
+        {
+            Clear();
+            min_heap =
+                std::priority_queue<T, std::vector<T>, std::greater<T> >();
+            max_heap =
+                std::priority_queue<T, std::vector<T>, std::less<T> >();
+        }
+
+        T Median() const
+        {
+            if (min_heap.size() == max_heap.size())
+                return(min_heap.top() + max_heap.top()) / ((T) 2.0);
+            else if (min_heap.size() > max_heap.size())
+                return min_heap.top();
+            else
+                return max_heap.top();
+        }
+
         void PushMedian(T x)
         {
             if (min_heap.empty()) {
@@ -106,7 +125,11 @@ class RunningStats
 
         T Kurtosis() const
         {
-            return T(n)*M4 / (M2*M2) - 3.0;
+            // Fisher's definition
+            //return T(n)*M4 / (M2*M2) - 3.0;
+
+            // We use Pearson's definition
+            return T(n)*M4 / (M2*M2);
         }
 
         T Max() const
@@ -119,21 +142,9 @@ class RunningStats
             return min;
         }
 
-		T Median() const
-		{
-			if (min_heap.size() == max_heap.size())
-				return(min_heap.top() + max_heap.top()) / ((T) 2.0);
-			else if (min_heap.size() > max_heap.size())
-				return min_heap.top();
-			else
-				return max_heap.top();
-		}
-
-	private:
-		long long n;
-		T M1, M2, M3, M4;
-
-        bool first;
+    private:
+        long long n;
+        T M1, M2, M3, M4;
         T min, max;
 
         std::priority_queue<T, std::vector<T>, std::greater<T> > min_heap;
@@ -143,16 +154,15 @@ class RunningStats
 template<typename T>
 class GlobalStats
 {
-	public:
-		GlobalStats(unsigned int window)
-            : window(window), fill(0),
-            M_XY(0), M_XZ(0), M_YZ(0)
+    public:
+        GlobalStats(unsigned int window)
+            : window(window), M_XY(0), M_XZ(0), M_YZ(0)
         {
         }
 
         bool Push(T x, T y, T z)
         {
-            if (fill >= window) Clear();
+            if (X.NumDataValues() >= window) Clear();
 
             long long n = X.NumDataValues() + 1;
             T delta_X = (x - X.Mean()) / n;
@@ -166,13 +176,13 @@ class GlobalStats
             Y.Push(y);
             Z.Push(z);
 
-            if (++fill == window) return true;
+            if (X.NumDataValues() == window) return true;
             else return false;
         }
 
         unsigned int GetFill()
         {
-            return fill;
+            return X.NumDataValues();
         }
 
         void Clear()
@@ -182,7 +192,16 @@ class GlobalStats
             X.Clear();
             Y.Clear();
             Z.Clear();
-            fill = 0;
+        }
+
+        void Reset()
+        {
+            M_XY = 0;
+            M_XZ = 0;
+            M_YZ = 0;
+            X.Reset();
+            Y.Reset();
+            Z.Reset();
         }
 
         T Correlation_XY()
@@ -210,9 +229,8 @@ class GlobalStats
         RunningStats<T> Y;
         RunningStats<T> Z;
 
-	private:
-		unsigned int window;
-        unsigned int fill;
+    private:
+        unsigned int window;
         T M_XY;
         T M_XZ;
         T M_YZ;

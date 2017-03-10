@@ -11,73 +11,120 @@ from scipy.stats import kurtosis
 from scipy.stats import pearsonr
 
 serial_dev = sys.argv[1]
+num_samples = int(sys.argv[2])
 
-#floatlist = [random.random() for _ in range(10**5)]
-#floatlist = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.1]
-#floatlist = [1,2,3,4,5,6,7,8,9,10]
-#floatlist = [1,1,1,1,1,1,1,1,1,1]
-x = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.1]
-y = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-z = [random.random() for _ in range(10)]
-xyz = list(sum(zip(x, y, z), ()))
+test_file_100 = "debug_100_KYUVIyu.txt"
+test_file_500 = "public_500_3PmqMUv.txt"
+
+def generate_answer(x_chan, y_chan, z_chan):
+    window_size = 100
+    win_x = []
+    win_y = []
+    win_z = []
+    answer = []
+
+    for x, y, z in zip(x_chan, y_chan, z_chan):
+        win_x.append(x)
+        win_y.append(y)
+        win_z.append(z)
+
+        if len(win_x) == window_size:
+            answer.append(min(win_x))
+            answer.append(max(win_x))
+            answer.append(mean(win_x))
+            answer.append(var(win_x))
+            answer.append(skew(win_x))
+            answer.append(kurtosis(win_x, fisher=False))
+            answer.append(min(win_y))
+            answer.append(max(win_y))
+            answer.append(mean(win_y))
+            answer.append(var(win_y))
+            answer.append(skew(win_y))
+            answer.append(kurtosis(win_y, fisher=False))
+            answer.append(min(win_z))
+            answer.append(max(win_z))
+            answer.append(mean(win_z))
+            answer.append(var(win_z))
+            answer.append(skew(win_z))
+            answer.append(kurtosis(win_z, fisher=False))
+            answer.append(pearsonr(win_x,win_y)[0])
+            answer.append(pearsonr(win_x,win_z)[0])
+            answer.append(pearsonr(win_y,win_z)[0])
+            win_x = []
+            win_y = []
+            win_z = []
+
+    answer.append(median(x_chan))
+    answer.append(median(y_chan))
+    answer.append(median(z_chan))
+
+    return answer
+
+
+def generate_samples(n=0, fname=None):
+    x_chan = []
+    y_chan = []
+    z_chan = []
+
+    if fname != None:
+        f = open(fname)
+        for line in f:
+            data = line.split(" ")
+            x_chan.append(float(data[0]))
+            y_chan.append(float(data[1]))
+            z_chan.append(float(data[2]))
+        f.close()
+        answer = generate_answer(x_chan[:-1], y_chan[:-1], z_chan[:-1])
+        xyz = list(sum(zip(x_chan, y_chan, z_chan), ()))
+    else:
+        x_chan = [m + 0.1 for m in range(n)]
+        y_chan = [m for m in range(n)]
+        z_chan = [random.random() for _ in range(n)]
+
+        #x_chan = [random.random() for _ in range(n)]
+        #y_chan = [random.random() for _ in range(n)]
+        #z_chan = [random.random() for _ in range(n)]
+
+        #x_chan = [m for m in range(n)]
+        #y_chan = [m for m in range(n)]
+        #z_chan = [m for m in range(n)]
+        answer = generate_answer(x_chan, y_chan, z_chan)
+        xyz = list(sum(zip(x_chan, y_chan, z_chan), ()))
+        xyz.extend([0,0,0])
+
+    return (xyz, answer)
+
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+#xyz, answer = generate_samples(fname=test_file_100)
+#xyz, answer = generate_samples(fname=test_file_500)
+#xyz, answer = generate_samples(n=500)
 buf = struct.pack('%sf' % len(xyz), *xyz)
 
-def print_stats_channel(channel_name, floatlist):
-	print "%s Min      %s" % (channel_name, min(floatlist))
-	print "%s Max      %s" % (channel_name, max(floatlist))
-	print "%s Mean     %s" % (channel_name, mean(floatlist))
-	print "%s Variance %s" % (channel_name, var(floatlist))
-	print "%s Skewness %s" % (channel_name, skew(floatlist))
-	print "%s Kurtosis %s" % (channel_name, kurtosis(floatlist))
-	print ""
-
-print "Expected:"
-print_stats_channel("X", x)
-print_stats_channel("Y", y)
-print_stats_channel("Z", z)
-print "Correlation XY %s" % pearsonr(x,y)[0]
-print "Correlation XZ %s" % pearsonr(x,z)[0]
-print "Correlation YZ %s" % pearsonr(y,z)[0]
-print ""
-print "X Median %s" % median(x)
-print "Y Median %s" % median(y)
-print "Z Median %s" % median(z)
-print ""
-
 with serial.Serial(serial_dev, 115200, timeout=1) as ser:
-	ser.write(buf)
-   	nresults = 21
-        res = ser.read(nresults * 4)
-	results = struct.unpack('%sf' % nresults, res)
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
 
-	print "Results:"
-	print "X Min      %s" % results[0]
-    	print "X Max      %s" % results[1]
-    	print "X Mean     %s" % results[2]
-    	print "X Variance %s" % results[3]
-    	print "X Skewness %s" % results[4]
-    	print "X Kurtosis %s" % results[5]
-    	print ""
-	print "Y Min      %s" % results[6]
-    	print "Y Max      %s" % results[7]
-    	print "Y Mean     %s" % results[8]
-    	print "Y Variance %s" % results[9]
-    	print "Y Skewness %s" % results[10]
-    	print "Y Kurtosis %s" % results[11]
-    	print ""
-	print "Z Min      %s" % results[12]
-    	print "Z Max      %s" % results[13]
-    	print "Z Mean     %s" % results[14]
-    	print "Z Variance %s" % results[15]
-    	print "Z Skewness %s" % results[16]
-    	print "Z Kurtosis %s" % results[17]
-    	print ""
-    	print "Correlation XY %s" % results[18]
-    	print "Correlation XZ %s" % results[19]
-    	print "Correlation YZ %s" % results[20]
-        print ""
-        #print "X Median %s" % results[21]
-        #print "Y Median %s" % results[22]
-        #print "Z Median %s" % results[23]
+    ser.write(buf)
+    rec = ser.read(len(answer) * 4)
+    print "Received %s bytes" % len(rec)
+    results = list(struct.unpack('%sf' % (len(rec) / 4), rec))
 
-    	ser.close()
+    num_err = 0
+
+    for a, b in zip(answer, results):
+        diff = a-b
+        ok = isclose(a, b, abs_tol=1e-3)
+        if not ok:
+            num_err += 1
+        print '{0:> 15e} {1:> 15e} {2:> 15e} {3:>8}'\
+                .format(a, b, diff, str(ok))
+
+    print ""
+    print "Received %s/%s bytes, Errors: %s" \
+            % (len(rec), len(answer) * 4, num_err)
+
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
+    ser.close()
