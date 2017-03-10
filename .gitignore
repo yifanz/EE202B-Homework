@@ -27,8 +27,6 @@
 *.exe
 *.out
 *.app
-BUILD/
-!BUILD/NUCLEO_F746ZG/GCC_ARM/homework.bin
 
 # Python
 *.pyc
