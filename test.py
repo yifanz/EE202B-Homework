@@ -84,13 +84,13 @@ def generate_samples(n=0, fname=None):
 
             return (input_bytes, sending_events, answer)
     else:
-        x_chan = [m + 0.1 for m in range(n)]
-        y_chan = [m for m in range(n)]
-        z_chan = [random.random() for _ in range(n)]
-
-        #x_chan = [random.random() for _ in range(n)]
-        #y_chan = [random.random() for _ in range(n)]
+        #x_chan = [m + 0.1 for m in range(n)]
+        #y_chan = [m for m in range(n)]
         #z_chan = [random.random() for _ in range(n)]
+
+        x_chan = [random.random() for _ in range(n)]
+        y_chan = [random.random() for _ in range(n)]
+        z_chan = [random.random() for _ in range(n)]
 
         #x_chan = [m for m in range(n)]
         #y_chan = [m for m in range(n)]
