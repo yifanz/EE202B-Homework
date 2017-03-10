@@ -151,11 +151,9 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
             struct.unpack('%sf' % (len(output_bytes) / 4), output_bytes))
 
     num_err = 0
-    diffs = []
 
     for a, b in zip(answer, results):
         diff = a-b
-        diffs.append(diff)
         ok = isclose(a, b, abs_tol=1e-3)
         if not ok:
             num_err += 1
@@ -163,8 +161,8 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
                 .format(a, b, diff, ' ' if ok else 'FAIL')
 
     print ""
-    print "Received %d/%d bytes, Errors: %d, Precision: %f" \
-            % (len(output_bytes), len(answer) * 4, num_err, mean(diffs))
+    print "Received %d/%d bytes, Errors: %d" \
+            % (len(output_bytes), len(answer) * 4, num_err,)
 
     ser.reset_input_buffer()
     ser.reset_output_buffer()
