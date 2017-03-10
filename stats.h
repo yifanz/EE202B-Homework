@@ -2,7 +2,7 @@
 #define STATS_H
 
 #include <queue>
-#include <vector>
+#include <deque>
 #include <limits>
 
 template<typename T>
@@ -26,9 +26,9 @@ class RunningStats
         {
             Clear();
             min_heap =
-                std::priority_queue<T, std::vector<T>, std::greater<T> >();
+                std::priority_queue<T, std::deque<T>, std::greater<T> >();
             max_heap =
-                std::priority_queue<T, std::vector<T>, std::less<T> >();
+                std::priority_queue<T, std::deque<T>, std::less<T> >();
         }
 
         T Median() const
@@ -147,8 +147,8 @@ class RunningStats
         T M1, M2, M3, M4;
         T min, max;
 
-        std::priority_queue<T, std::vector<T>, std::greater<T> > min_heap;
-        std::priority_queue<T, std::vector<T>, std::less<T> > max_heap;
+        std::priority_queue<T, std::deque<T>, std::greater<T> > min_heap;
+        std::priority_queue<T, std::deque<T>, std::less<T> > max_heap;
 };
 
 template<typename T>

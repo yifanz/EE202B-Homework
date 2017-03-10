@@ -101,7 +101,23 @@ def generate_samples(n=0, fname=None):
         xyz.extend([0,0,0])
         input_bytes = struct.pack('%sf' % len(xyz), *xyz)
 
-        return (input_bytes, None, answer)
+        sending_events = None
+
+        # TODO working on this
+        #send_limit = int(5000)
+        #if n > send_limit:
+        #    num_sending_events = int(n) / send_limit
+        #    remaining = int(n) % send_limit
+        #    if remaining > 0:
+        #        num_sending_events += 1
+        #    sending_events = []
+        #    for i in range(num_sending_events):
+        #        num_bytes = send_limit * 4 * 3
+        #        waiting_time = 0
+        #        sending_events.append((num_bytes, waiting_time))
+        #    sending_events[-1] = (remaining * 4 * 3, 0)
+
+        return (input_bytes, sending_events, answer)
 
 
 def isint(s):
@@ -136,6 +152,7 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
 
     if sending_events != None:
         bidx = 0
+        output_bytes = bytes()
         for chunk_size, wait_time in sending_events:
             for i in range(chunk_size):
                 ser.write(input_bytes[bidx:bidx+1])
@@ -147,6 +164,7 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
         ser.write(input_bytes)
 
     output_bytes = ser.read(len(answer) * 4)
+
     results = list( \
             struct.unpack('%sf' % (len(output_bytes) / 4), output_bytes))
 
