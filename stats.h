@@ -18,13 +18,13 @@ class RunningStats
         {
             n = 0;
             M1 = M2 = M3 = M4 = 0.0;
-            min = std::numeric_limits<T>::max();
-            max = std::numeric_limits<T>::min();
         }
 
         void Reset()
         {
             Clear();
+            min = std::numeric_limits<T>::max();
+            max = std::numeric_limits<T>::min();
             min_heap =
                 std::priority_queue<T, std::deque<T>, std::greater<T> >();
             max_heap =

@@ -25,26 +25,47 @@ def generate_answer(x_chan, y_chan, z_chan):
     win_z = []
     answer = []
 
+    x_min = None
+    y_min = None
+    z_min = None
+    x_max = None
+    y_max = None
+    z_max = None
+
     for x, y, z in zip(x_chan, y_chan, z_chan):
         win_x.append(x)
         win_y.append(y)
         win_z.append(z)
 
+        if x_min == None or x < x_min:
+            x_min = x
+        if y_min == None or y < y_min:
+            y_min = y
+        if z_min == None or z < z_min:
+            z_min = z
+
+        if x_max == None or x > x_max:
+            x_max = x
+        if y_max == None or y > y_max:
+            y_max = y
+        if z_max == None or z > z_max:
+            z_max = z
+
         if len(win_x) == window_size:
-            answer.append(min(win_x))
-            answer.append(max(win_x))
+            answer.append(x_min)
+            answer.append(x_max)
             answer.append(mean(win_x))
             answer.append(var(win_x))
             answer.append(skew(win_x))
             answer.append(kurtosis(win_x, fisher=False))
-            answer.append(min(win_y))
-            answer.append(max(win_y))
+            answer.append(y_min)
+            answer.append(y_max)
             answer.append(mean(win_y))
             answer.append(var(win_y))
             answer.append(skew(win_y))
             answer.append(kurtosis(win_y, fisher=False))
-            answer.append(min(win_z))
-            answer.append(max(win_z))
+            answer.append(z_min)
+            answer.append(z_max)
             answer.append(mean(win_z))
             answer.append(var(win_z))
             answer.append(skew(win_z))
