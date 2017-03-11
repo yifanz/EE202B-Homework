@@ -169,7 +169,8 @@ class GlobalStats
             Y.Push(y);
             Z.Push(z);
 
-            if (X.NumDataValues() == window) return true;
+            n = X.NumDataValues();
+            if (n > 0 && ((n % window) == 0)) return true;
             else return false;
         }
 

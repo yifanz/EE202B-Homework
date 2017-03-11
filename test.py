@@ -30,7 +30,7 @@ def generate_answer(x_chan, y_chan, z_chan):
         win_y.append(y)
         win_z.append(z)
 
-        if len(win_x) == window_size:
+        if len(win_x) > 0 and len(win_x) % window_size == 0:
             answer.append(min(win_x))
             answer.append(max(win_x))
             answer.append(mean(win_x))
@@ -136,6 +136,7 @@ def isint(s):
 
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    #return b >= a * 0.999 and b <= a * 1.001
 
 
 serial_dev = sys.argv[1]
