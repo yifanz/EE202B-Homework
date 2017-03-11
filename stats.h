@@ -11,18 +11,13 @@ class RunningStats
     public:
         RunningStats()
         {
-            Clear();
-        }
-
-        void Clear()
-        {
-            n = 0;
-            M1 = M2 = M3 = M4 = 0.0;
+            Reset();
         }
 
         void Reset()
         {
-            Clear();
+            n = 0;
+            M1 = M2 = M3 = M4 = 0.0;
             min = std::numeric_limits<T>::max();
             max = std::numeric_limits<T>::min();
             min_heap =
@@ -162,8 +157,6 @@ class GlobalStats
 
         bool Push(T x, T y, T z)
         {
-            if (X.NumDataValues() >= window) Clear();
-
             long long n = X.NumDataValues() + 1;
             T delta_X = (x - X.Mean()) / n;
             T delta_Y = (y - Y.Mean()) / n;
@@ -183,15 +176,6 @@ class GlobalStats
         unsigned int GetFill()
         {
             return X.NumDataValues();
-        }
-
-        void Clear()
-        {
-            // Clear does NOT clear the Median because
-            // we need to track the Median for all samples.
-            X.Clear();
-            Y.Clear();
-            Z.Clear();
         }
 
         void Reset()

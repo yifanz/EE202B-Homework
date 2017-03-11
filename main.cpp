@@ -75,7 +75,6 @@ int main() {
     pc.read(rx_buf, REC_WIN_BYTES,
             serialEventCb, SERIAL_EVENT_RX_COMPLETE);
 
-    stats.Reset();
     while (true) {
         // Execution halts here.
         // Will resume when an interrupt happens.
