@@ -120,7 +120,7 @@ class RunningStats
 
         T Skewness() const
         {
-            return sqrt(T(n)) * M3/ pow(M2, 1.5);
+            return sqrt(T(n)) * M3/ pow(M2, (T) 1.5);
         }
 
         T Kurtosis() const
