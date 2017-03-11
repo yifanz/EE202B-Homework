@@ -4,6 +4,7 @@ import struct
 import random
 import time
 import threading
+import pdb
 from Queue import Queue
 from numpy import mean
 from numpy import median
@@ -49,6 +50,8 @@ def generate_answer(x_chan, y_chan, z_chan):
             answer.append(var(win_z))
             answer.append(skew(win_z))
             answer.append(kurtosis(win_z, fisher=False))
+            #if len(win_z) == 300:
+            #    pdb.set_trace()
             answer.append(pearsonr(win_x,win_y)[0])
             answer.append(pearsonr(win_x,win_z)[0])
             answer.append(pearsonr(win_y,win_z)[0])
@@ -210,13 +213,15 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
 
     num_err = 0
 
+    i = 1
     for a, b in zip(answer, results):
         diff = a-b
         ok = isclose(a, b, abs_tol=1e-3)
         if not ok:
             num_err += 1
-        print '{0:> 15e} {1:> 15e} {2:> 15e} {3:>8}'\
-                .format(a, b, diff, ' ' if ok else 'FAIL')
+        print '{0:< 5} {1:> 15e} {2:> 15e} {3:> 15e} {4:>8}'\
+                .format(i, a, b, diff, ' ' if ok else 'FAIL')
+        i += 1
 
     print ""
     print "Received %d/%d bytes, Errors: %d, Elapsed: %f sec" \
