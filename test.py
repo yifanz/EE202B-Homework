@@ -3,6 +3,8 @@ import serial
 import struct
 import random
 import time
+import threading
+from Queue import Queue
 from numpy import mean
 from numpy import median
 from numpy import var
@@ -11,8 +13,13 @@ from scipy.stats import kurtosis
 from scipy.stats import pearsonr
 
 
+USE_THREADING = True
+#SEND_LIMIT = int(200)
+SAMPLE_WIN = int(100)
+
+
 def generate_answer(x_chan, y_chan, z_chan):
-    window_size = 100
+    window_size = SAMPLE_WIN
     win_x = []
     win_y = []
     win_z = []
@@ -78,7 +85,7 @@ def generate_samples(n=0, fname=None):
                 terms = f.readline().strip().split(' ')
                 num_bytes, waiting_time = int(terms[0]), float(terms[1])
                 sending_events.append((num_bytes, waiting_time))
-            expected_received_bytes = (((num_samples // 100) * 21) + 3) * 4
+            #expected_received_bytes = (((num_samples // 100) * 21) + 3) * 4
 
             answer = generate_answer(x_chan[:-1], y_chan[:-1], z_chan[:-1])
 
@@ -103,19 +110,21 @@ def generate_samples(n=0, fname=None):
 
         sending_events = None
 
-        # TODO working on this
-        #send_limit = int(5000)
-        #if n > send_limit:
-        #    num_sending_events = int(n) / send_limit
-        #    remaining = int(n) % send_limit
+        # TODO was tring to divide up random samples and send them
+        # with delays in between.
+        #n_samples = n + 1
+        #if n_samples > SEND_LIMIT:
+        #    num_sending_events = int(n_samples) // SEND_LIMIT
+        #    remaining = int(n_samples) % SEND_LIMIT
         #    if remaining > 0:
         #        num_sending_events += 1
         #    sending_events = []
         #    for i in range(num_sending_events):
-        #        num_bytes = send_limit * 4 * 3
+        #        num_bytes = SEND_LIMIT * 4 * 3
         #        waiting_time = 0
         #        sending_events.append((num_bytes, waiting_time))
-        #    sending_events[-1] = (remaining * 4 * 3, 0)
+        #    if remaining > 0:
+        #        sending_events[-1] = (remaining * 4 * 3, 0)
 
         return (input_bytes, sending_events, answer)
 
@@ -150,6 +159,22 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
     ser.reset_input_buffer()
     ser.reset_output_buffer()
 
+    if USE_THREADING:
+        connected = False
+        def read_from_port(ser, num_bytes, q):
+            output = bytes()
+            while connected:
+                output += ser.read(num_bytes)
+            q.put(output)
+
+        q = Queue()
+        read_thread = threading.Thread(target=read_from_port, \
+                args=(ser, len(answer) * 4, q))
+        connected = True
+        read_thread.start()
+
+    ts_start = time.time()
+
     if sending_events != None:
         bidx = 0
         output_bytes = bytes()
@@ -163,7 +188,19 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
     else:
         ser.write(input_bytes)
 
-    output_bytes = ser.read(len(answer) * 4)
+    if USE_THREADING:
+        connected = False
+        read_thread.join()
+        output_bytes = q.get()
+    else:
+        # Warning, if you don't use threading, then you risk losing
+        # some result data when the input size of large (>5000).
+        # Probably due to the limited serial buffer size in Linux
+        # or pyserial.
+        output_bytes = ser.read(len(answer) * 4)
+
+    ts_end = time.time()
+
 
     results = list( \
             struct.unpack('%sf' % (len(output_bytes) / 4), output_bytes))
@@ -179,8 +216,9 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
                 .format(a, b, diff, ' ' if ok else 'FAIL')
 
     print ""
-    print "Received %d/%d bytes, Errors: %d" \
-            % (len(output_bytes), len(answer) * 4, num_err,)
+    print "Received %d/%d bytes, Errors: %d, Elapsed: %f sec" \
+            % (len(output_bytes), len(answer) * 4, num_err, \
+            (ts_end - ts_start))
 
     ser.reset_input_buffer()
     ser.reset_output_buffer()
