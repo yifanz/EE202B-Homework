@@ -175,13 +175,19 @@ int main() {
             }
 
             if (send_median) {
-                // Reset stats.
+                // Reset everything.
                 // TODO Probably not needed. If the autograder
                 // resets the board after each test, then we
                 // don't need this here.
                 stats.Reset();
+                pc.abort_write();
+                pc.abort_read();
                 rec_wnd_start = 0;
                 rec_wnd_end = 0;
+                memset(rx_buf, 0, RX_BUF_BYTES);
+                memset(tx_buf, 0, TX_BUF_BYTES);
+                pc.read(rx_buf, REC_WIN_BYTES,
+                        serialEventCb, SERIAL_EVENT_RX_COMPLETE);
             }
         }
     }

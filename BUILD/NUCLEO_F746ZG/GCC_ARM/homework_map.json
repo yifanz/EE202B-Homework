@@ -4,7 +4,7 @@
         "size": {
             ".data": 7, 
             ".bss": 9, 
-            ".text": 192
+            ".text": 180
         }
     }, 
     {
@@ -12,7 +12,7 @@
         "size": {
             ".data": 2257, 
             ".bss": 15272, 
-            ".text": 64427
+            ".text": 64495
         }
     }, 
     {
@@ -20,7 +20,7 @@
         "size": {
             ".data": 4, 
             ".bss": 132, 
-            ".text": 2290
+            ".text": 2302
         }
     }, 
     {
@@ -68,12 +68,12 @@
         "size": {
             ".data": 4, 
             ".bss": 1152, 
-            ".text": 9237
+            ".text": 9297
         }
     }, 
     {
         "summary": {
-            "total_flash": 87038, 
+            "total_flash": 87166, 
             "static_ram": 38580, 
             "stack": 0, 
             "heap": 0, 

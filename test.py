@@ -220,5 +220,12 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
             % (len(output_bytes), len(answer) * 4, num_err, \
             (ts_end - ts_start))
 
+    print ""
+    if len(output_bytes) == (len(answer) * 4) and num_err == 0:
+        print "Test SUCCESSFUL"
+    else:
+        print "Test FAILED"
+    print ""
+
     ser.reset_input_buffer()
     ser.reset_output_buffer()
