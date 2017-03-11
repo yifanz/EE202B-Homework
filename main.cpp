@@ -4,6 +4,8 @@
 // Turn on for debugging.
 //#define DEBUG
 
+//#define ASYNC_WRITE
+
 /**
  *
  *   Sample Win  |---------------n-samples--------------|
@@ -150,13 +152,7 @@ int main() {
             if (send_report || send_median) {
                 // Send the report.
 
-                for (uint8_t *p = (uint8_t*) start;
-                        p < (uint8_t*) end;
-                        p++) {
-                    pc.putc(*p);
-                }
-
-                /*
+#ifdef ASYNC_WRITE
                 // Don't know why, but the async write just isn't reliable.
                 int status = pc.write((uint8_t*) start,
                         sizeof(float) * (end - start),
@@ -171,7 +167,13 @@ int main() {
                     led3 = 1;
 #endif
                 }
-                */
+#else
+                for (uint8_t *p = (uint8_t*) start;
+                        p < (uint8_t*) end;
+                        p++) {
+                    pc.putc(*p);
+                }
+#endif
             }
 
             if (send_median) {
@@ -180,12 +182,12 @@ int main() {
                 // resets the board after each test, then we
                 // don't need this here.
                 stats.Reset();
-                pc.abort_write();
+                //pc.abort_write();
                 pc.abort_read();
                 rec_wnd_start = 0;
                 rec_wnd_end = 0;
-                memset(rx_buf, 0, RX_BUF_BYTES);
-                memset(tx_buf, 0, TX_BUF_BYTES);
+                //memset(rx_buf, 0, RX_BUF_BYTES);
+                //memset(tx_buf, 0, TX_BUF_BYTES);
                 pc.read(rx_buf, REC_WIN_BYTES,
                         serialEventCb, SERIAL_EVENT_RX_COMPLETE);
             }
