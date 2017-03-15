@@ -4,8 +4,6 @@
 // Turn on for debugging.
 //#define DEBUG
 
-//#define ASYNC_WRITE
-
 /**
  *
  *   Sample Win  |---------------n-samples--------------|
@@ -43,7 +41,10 @@ GlobalStats<float> stats(SAMPLE_SIZE);
 // for that.
 #define RX_BUF_SIZE 1024
 #define RX_BUF_BYTES (REC_WIN * RX_BUF_SIZE * sizeof(float))
-#define TX_BUF_BYTES (24 * sizeof(float))
+// The MCU may fill the TX buffer faster than the hardware can send it.
+#define TX_BUF_SIZE (24 * 8)
+// Must be aligned to sizeof float
+#define TX_BUF_BYTES (TX_BUF_SIZE * sizeof(float))
 
 // RX and TX Buffers
 uint8_t rx_buf[RX_BUF_BYTES];
@@ -53,10 +54,19 @@ uint8_t tx_buf[TX_BUF_BYTES];
 volatile size_t rec_wnd_start;
 volatile size_t rec_wnd_end;
 
+// Send Window (4 byte index)
+volatile size_t send_wnd_start;
+volatile size_t send_wnd_end;
+volatile size_t send_num_floats;
+volatile bool tx_busy = false;
+volatile bool send_median = false;
+
 Serial pc(USBTX, USBRX, 115200);
 
 event_callback_t serialEventCb;
+event_callback_t serialTxEventCb;
 void serialCb(int events);
+void serialTxCb(int events);
 
 #ifdef DEBUG
 // Debug
@@ -68,8 +78,11 @@ DigitalOut led3(LED3);
 int main() {
     rec_wnd_start = 0;
     rec_wnd_end = 0;
+    send_wnd_start = 0;
+    send_wnd_end = 0;
 
     serialEventCb.attach(serialCb);
+    serialTxEventCb.attach(serialTxCb);
 
     // When the receive window is full, the callback is invoked.
     pc.read(rx_buf, REC_WIN_BYTES,
@@ -87,7 +100,6 @@ int main() {
 #endif
         if (rec_wnd_start != rec_wnd_end) {
             float *start = (float*) (rx_buf + rec_wnd_start);
-            float *end = start + REC_WIN;
 
             // Move start of the receive window starting forward.
             // Wrap if necessary.
@@ -99,7 +111,7 @@ int main() {
             float z = *(start+2);
 
             bool send_report = false;
-            bool send_median = false;
+            send_median = false;
 
             if (x == 0 && y == 0 && z == 0) {
                 // When x, y and z are zero, we are done.
@@ -114,65 +126,70 @@ int main() {
             }
 
             start = (float*) tx_buf;
-            end = start;
+
+#define TX_BUF_PUT(fval) \
+            *(start + send_wnd_end) = fval; \
+            send_wnd_end = (send_wnd_end + 1) % TX_BUF_SIZE;
 
             // We have collected enough samples.
             // Send report.
             if (send_report) {
-                *end++ = stats.X.Min();
-                *end++ = stats.X.Max();
-                *end++ = stats.X.Mean();
-                *end++ = stats.X.Variance();
-                *end++ = stats.X.Skewness();
-                *end++ = stats.X.Kurtosis();
-                *end++ = stats.Y.Min();
-                *end++ = stats.Y.Max();
-                *end++ = stats.Y.Mean();
-                *end++ = stats.Y.Variance();
-                *end++ = stats.Y.Skewness();
-                *end++ = stats.Y.Kurtosis();
-                *end++ = stats.Z.Min();
-                *end++ = stats.Z.Max();
-                *end++ = stats.Z.Mean();
-                *end++ = stats.Z.Variance();
-                *end++ = stats.Z.Skewness();
-                *end++ = stats.Z.Kurtosis();
-                *end++ = stats.Correlation_XY();
-                *end++ = stats.Correlation_XZ();
-                *end++ = stats.Correlation_YZ();
+                TX_BUF_PUT(stats.X.Min());
+                TX_BUF_PUT(stats.X.Max());
+                TX_BUF_PUT(stats.X.Mean());
+                TX_BUF_PUT(stats.X.Variance());
+                TX_BUF_PUT(stats.X.Skewness());
+                TX_BUF_PUT(stats.X.Kurtosis());
+                TX_BUF_PUT(stats.Y.Min());
+                TX_BUF_PUT(stats.Y.Max());
+                TX_BUF_PUT(stats.Y.Mean());
+                TX_BUF_PUT(stats.Y.Variance());
+                TX_BUF_PUT(stats.Y.Skewness());
+                TX_BUF_PUT(stats.Y.Kurtosis());
+                TX_BUF_PUT(stats.Z.Min());
+                TX_BUF_PUT(stats.Z.Max());
+                TX_BUF_PUT(stats.Z.Mean());
+                TX_BUF_PUT(stats.Z.Variance());
+                TX_BUF_PUT(stats.Z.Skewness());
+                TX_BUF_PUT(stats.Z.Kurtosis());
+                TX_BUF_PUT(stats.Correlation_XY());
+                TX_BUF_PUT(stats.Correlation_XZ());
+                TX_BUF_PUT(stats.Correlation_YZ());
             }
 
             if (send_median) {
-                *end++ = stats.X.Median();
-                *end++ = stats.Y.Median();
-                *end++ = stats.Z.Median();
+                TX_BUF_PUT(stats.X.Median());
+                TX_BUF_PUT(stats.Y.Median());
+                TX_BUF_PUT(stats.Z.Median());
             }
+#undef TX_BUF_PUT
 
-            if (send_report || send_median) {
+            if ((send_report || send_median)
+                    && !tx_busy && send_wnd_start != send_wnd_end) {
                 // Send the report.
 
-#ifdef ASYNC_WRITE
-                // Don't know why, but the async write just isn't reliable.
-                int status = pc.write((uint8_t*) start,
-                        sizeof(float) * (end - start),
-                        0, 0);
+                tx_busy = true;
 
-                if (status) {
+                send_num_floats = send_wnd_start <= send_wnd_end ?
+                    (send_wnd_end - send_wnd_start) :
+                    (TX_BUF_SIZE - send_wnd_start);
+
+                if (send_num_floats > 0) {
+                    int status = pc.write(
+                            tx_buf + (send_wnd_start * sizeof(float)),
+                            send_num_floats * sizeof(float),
+                            serialTxEventCb, SERIAL_EVENT_TX_COMPLETE);
+
+                    if (status) {
 #ifdef DEBUG
-                    // Error!
-                    // We should not get here. If we do, it most
-                    // likely means that we are transmitting the
-                    // current report before the last one has finished.
-                    led3 = 1;
+                        // Error!
+                        // We should not get here. If we do, it most
+                        // likely means that we are transmitting the
+                        // current report before the last one has finished.
+                        led3 = 1;
 #endif
+                    }
                 }
-#else
-                for (uint8_t *p = (uint8_t*) start;
-                        p < (uint8_t*) end;
-                        p++) {
-                    pc.putc(*p);
-                }
-#endif
             }
 
             if (send_median) {
@@ -225,4 +242,33 @@ void serialCb(int events) {
 
 	pc.read(rx_buf + rec_wnd_end, REC_WIN_BYTES,
             serialEventCb, SERIAL_EVENT_RX_COMPLETE);
+}
+
+void serialTxCb(int events) {
+    if (events & SERIAL_EVENT_TX_COMPLETE) {
+        // Move send window up
+        send_wnd_start =
+            (send_wnd_start + send_num_floats) % TX_BUF_SIZE;
+
+        if (send_wnd_start != send_wnd_end) {
+            send_num_floats = send_wnd_start <= send_wnd_end ?
+                (send_wnd_end - send_wnd_start) :
+                (TX_BUF_SIZE - send_wnd_start);
+
+            if (send_num_floats > 0) {
+                pc.write(
+                        tx_buf + (send_wnd_start * sizeof(float)),
+                        send_num_floats * sizeof(float),
+                        serialTxEventCb, SERIAL_EVENT_TX_COMPLETE);
+            }
+        } else {
+            if (send_median) {
+                // That was the last transmission.
+                send_wnd_start = 0;
+                send_wnd_end = 0;
+                pc.abort_write();
+            }
+            tx_busy = false;
+        }
+    }
 }

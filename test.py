@@ -164,6 +164,7 @@ with serial.Serial(port=serial_dev, baudrate=115200, \
 
     ser.reset_input_buffer()
     ser.reset_output_buffer()
+    ser.read(100000)
 
     if USE_THREADING:
         connected = False
